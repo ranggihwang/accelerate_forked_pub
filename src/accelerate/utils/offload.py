@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+""" RH """
+import torch.cuda.nvtx as nvtx_cuda
+import nvtx
+
+
 import json
 import os
 from collections.abc import Mapping
@@ -124,6 +129,7 @@ class PrefixedDataset(Mapping):
         return len(self.dataset)
 
 
+# RH: Load from SSD
 class OffloadedWeightsLoader(Mapping):
     """
     A collection that loads weights stored in a given state dict or memory-mapped on disk.
@@ -158,6 +164,7 @@ class OffloadedWeightsLoader(Mapping):
         self.all_keys.extend([key for key in self.index if key not in self.all_keys])
         self.device = device
 
+    @nvtx.annotate("OffloadedWeightsLoader:__getitem__", color="red")
     def __getitem__(self, key: str):
         # State dict gets priority
         if key in self.state_dict:

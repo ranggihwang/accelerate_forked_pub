@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+""" RH """
+import torch.cuda.nvtx as nvtx_cuda
+import nvtx
+
+
+
 import functools
 from typing import Dict, List, Mapping, Optional, Union
 
@@ -29,6 +35,7 @@ from .utils import (
 from .utils.modeling import get_non_persistent_buffers
 
 
+# RH
 class ModelHook:
     """
     A hook that contains callbacks to be executed just before and after the forward method of a model. The difference
@@ -198,6 +205,7 @@ def remove_hook_from_module(module: nn.Module, recurse=False):
     return module
 
 
+# RH
 class AlignDevicesHook(ModelHook):
     """
     A generic `ModelHook` that ensures inputs and model weights are on the same device for the forward pass of the
@@ -276,6 +284,7 @@ class AlignDevicesHook(ModelHook):
 
         return module
 
+    # RH: get device aligned
     def pre_forward(self, module, *args, **kwargs):
         if self.io_same_device:
             self.input_device = find_device([args, kwargs])
@@ -286,6 +295,8 @@ class AlignDevicesHook(ModelHook):
                 recurse=self.place_submodules,
                 remove_non_persistent=True,
             ):
+                # RH
+                nvtx_cuda.range_push("SUSPECTED!!")
                 fp16_statistics = None
                 if "weight" in name and name.replace("weight", "SCB") in self.weights_map.keys():
                     if self.weights_map[name].dtype == torch.int8:
@@ -293,6 +304,7 @@ class AlignDevicesHook(ModelHook):
                 set_module_tensor_to_device(
                     module, name, self.execution_device, value=self.weights_map[name], fp16_statistics=fp16_statistics
                 )
+                nvtx_cuda.range_pop()
 
         return send_to_device(args, self.execution_device), send_to_device(
             kwargs, self.execution_device, skip_keys=self.skip_keys
@@ -445,7 +457,8 @@ def remove_hook_from_submodules(module: nn.Module):
     for child in module.children():
         remove_hook_from_submodules(child)
 
-
+# RH
+@nvtx.annotate("attach_align_device_hook_on_blocks", color="orange")
 def attach_align_device_hook_on_blocks(
     module: nn.Module,
     execution_device: Optional[Union[torch.device, Dict[str, torch.device]]] = None,
