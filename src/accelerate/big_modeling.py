@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+""" RH """
+import torch.cuda.nvtx as nvtx_cuda
+import nvtx
+
+
 import logging
 import os
 from contextlib import contextmanager
@@ -299,7 +304,8 @@ def disk_offload(
 
     return model
 
-
+# RH
+@nvtx.annotate("dispatch_model", color="orange")
 def dispatch_model(
     model: nn.Module,
     device_map: Dict[str, Union[str, int, torch.device]],

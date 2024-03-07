@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# RH
+import torch.cuda.nvtx as nvtx_cuda
+import nvtx
+
 import contextlib
 import gc
 import importlib
@@ -272,6 +276,8 @@ def shard_checkpoint(
     return shards, index
 
 
+# RH: tensor movement function
+@nvtx.annotate("set_module_tensor_to_device", color="orange")
 def set_module_tensor_to_device(
     module: nn.Module,
     tensor_name: str,
